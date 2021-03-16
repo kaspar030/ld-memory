@@ -1,0 +1,12 @@
+[package]
+name = "ld-memory"
+version = "0.1.0"
+authors = ["Kaspar Schleiser <kaspar@schleiser.de>"]
+edition = "2018"
+description = "Helper crate to programmatically create GNU ld MEMORY blocks"
+license = "MIT OR Apache-2.0"
+categories = ["development-tools::build-utils"]
+readme = "README.md"
+repository = "https://github.com/kaspar030/ld-memory"
+
+[dependencies]
