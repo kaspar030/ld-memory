@@ -1,3 +1,6 @@
+use std::io::Result;
+use std::path::Path;
+
 pub struct Memory {
     sections: Vec<MemorySection>,
 }
@@ -22,6 +25,10 @@ impl Memory {
         }
         out.push_str("}\n");
         out
+    }
+
+    pub fn to_file<P: AsRef<Path>>(&self, path: P) -> Result<()> {
+        std::fs::write(path, self.to_string())
     }
 }
 
