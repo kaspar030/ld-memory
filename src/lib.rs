@@ -69,7 +69,7 @@ impl MemorySection {
 
     pub fn to_string(&self) -> String {
         format!(
-            "    {} {}: ORIGIN = {:#010X}, LENGTH = {}\n",
+            "    {} {}: ORIGIN = {:#X}, LENGTH = {:#X}\n",
             self.name,
             self.attrs
                 .as_ref()
