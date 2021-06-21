@@ -1,5 +1,15 @@
-use std::io::Result;
+///! Create ld memory sections programmaticaly
+///
+/// This crate can be used in build.rs scripts to replace static memory.x files
+/// often used in MCU peripheral access crates.
+///
+/// It was first built to allow specifying a bootloader offset and splitting
+/// the remaining flash memory into "slots" for an active/passive updating
+/// scheme.
+///
+use std::num::ParseIntError;
 use std::path::Path;
+use std::result::Result;
 
 pub struct Memory {
     sections: Vec<MemorySection>,
@@ -27,7 +37,7 @@ impl Memory {
         out
     }
 
-    pub fn to_file<P: AsRef<Path>>(&self, path: P) -> Result<()> {
+    pub fn to_file<P: AsRef<Path>>(&self, path: P) -> std::io::Result<()> {
         std::fs::write(path, self.to_string())
     }
 }
@@ -37,6 +47,7 @@ pub struct MemorySection {
     attrs: Option<String>,
     origin: usize,
     length: usize,
+    pagesize: usize,
 }
 
 impl MemorySection {
@@ -46,6 +57,7 @@ impl MemorySection {
             origin,
             length,
             attrs: None,
+            pagesize: 1,
         }
     }
 
@@ -55,7 +67,123 @@ impl MemorySection {
             origin: self.origin + offset,
             length: self.length - offset,
             attrs: self.attrs,
+            pagesize: self.pagesize,
         }
+    }
+
+    pub fn pagesize(self, pagesize: usize) -> MemorySection {
+        Self {
+            name: self.name,
+            origin: self.origin,
+            length: self.length,
+            attrs: self.attrs,
+            pagesize,
+        }
+    }
+
+    /// Divide memory section into slots.
+    ///
+    /// This can be used to divide a memory section into multiple slots of equal
+    /// size, e.g., for an active / passive image scheme on MCUs.
+    ///
+    /// `slot` starts at zero for the first slot.
+    pub fn slot(self, slot: usize, num_slots: usize) -> MemorySection {
+        assert!(slot < num_slots);
+
+        fn align_add(val: usize, alignment: usize) -> usize {
+            if val % alignment != 0 {
+                (val + alignment) - val % alignment
+            } else {
+                val
+            }
+        }
+
+        fn align_sub(mut val: usize, alignment: usize) -> usize {
+            val -= val % alignment;
+            val
+        }
+
+        // ensure both start and end are aligned with the pagesize
+        let origin = align_add(self.origin, self.pagesize);
+        let end = align_sub(self.origin + self.length, self.pagesize);
+
+        let slot_length = align_sub((end - origin) / num_slots, self.pagesize);
+        let slot_origin = origin + (slot * slot_length);
+
+        Self {
+            name: self.name,
+            origin: slot_origin,
+            length: slot_length,
+            attrs: self.attrs,
+            pagesize: self.pagesize,
+        }
+    }
+
+    /// Read options from environment
+    ///
+    /// This will evaluate the following environment variables:
+    ///
+    /// |Variable            |Default|
+    /// |--------------------|-------|
+    /// |`LDMEMORY_OFFSET`   |      0|
+    /// |`LDMEMORY_PAGESIZE` |      1|
+    /// |`LDMEMORY_NUM_SLOTS`|      2|
+    /// |`LDMEMORY_SLOT`     |   None|
+    ///
+    /// If an offset is given, the whole section will be offset and shortened
+    /// by the given value.
+    /// If a pagesize is given, the slots will start and end will be aligned at
+    /// the pagesize.
+    ///
+    /// If a slot number is given, the remaining section will be divided into
+    /// `<prefix>_NUM_SLOTS` slots, aligned to `<prefix>_PAGESIZE`, and the
+    /// `<prefix>_SLOT`th (starting at 0) will be returned.
+    ///
+    /// Note: `from_env_with_prefix` can be used to use a different prefix than
+    /// the default prefix `LDMEMORY_`.
+    ///
+    pub fn from_env(self) -> MemorySection {
+        self.from_env_with_prefix("LDMEMORY")
+    }
+
+    /// Read slot options from environment with custom prefix
+    ///
+    /// See `from_env()`.
+    pub fn from_env_with_prefix(self, prefix: &str) -> MemorySection {
+        use std::env::var;
+        let offset_env = &[prefix, "OFFSET"].join("_");
+        let num_slots_env = &[prefix, "NUM_SLOTS"].join("_");
+        let slot_env = &[prefix, "SLOT"].join("_");
+        let pagesize_env = &[prefix, "PAGESIZE"].join("_");
+
+        let mut res = self;
+        if let Ok(offset) = var(offset_env) {
+            let offset: usize = offset
+                .parse_dec_or_hex()
+                .expect(&format!("parsing {}", &offset_env));
+            res = res.offset(offset);
+        }
+
+        if let Ok(pagesize) = var(pagesize_env) {
+            let pagesize: usize = pagesize
+                .parse_dec_or_hex()
+                .expect(&format!("parsing {}", &pagesize_env));
+            res = res.pagesize(pagesize);
+        }
+
+        if let Ok(slot) = var(slot_env) {
+            let slot: usize = slot
+                .parse::<usize>()
+                .expect(&format!("parsing {}", slot_env));
+            let num_slots: usize = var(num_slots_env)
+                .unwrap_or("2".into())
+                .parse()
+                .expect(&format!("parsing {}", &num_slots_env));
+
+            res = res.slot(slot, num_slots);
+        }
+
+        res
     }
 
     pub fn attrs(self, attrs: &str) -> MemorySection {
@@ -64,6 +192,7 @@ impl MemorySection {
             origin: self.origin,
             length: self.length,
             attrs: Some(attrs.into()),
+            pagesize: self.pagesize,
         }
     }
 
@@ -77,6 +206,21 @@ impl MemorySection {
             self.origin,
             self.length
         )
+    }
+}
+
+/// Helper trait to parse strings to usize from both decimal or hex
+trait ParseDecOrHex {
+    fn parse_dec_or_hex(&self) -> Result<usize, ParseIntError>;
+}
+
+impl ParseDecOrHex for String {
+    fn parse_dec_or_hex(&self) -> Result<usize, ParseIntError> {
+        if self.starts_with("0x") {
+            usize::from_str_radix(&self[2..], 16)
+        } else {
+            usize::from_str_radix(self, 10)
+        }
     }
 }
 
