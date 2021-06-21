@@ -45,13 +45,13 @@ impl Memory {
 pub struct MemorySection {
     name: String,
     attrs: Option<String>,
-    origin: usize,
-    length: usize,
-    pagesize: usize,
+    origin: u64,
+    length: u64,
+    pagesize: u64,
 }
 
 impl MemorySection {
-    pub fn new(name: &str, origin: usize, length: usize) -> MemorySection {
+    pub fn new(name: &str, origin: u64, length: u64) -> MemorySection {
         Self {
             name: name.into(),
             origin,
@@ -61,7 +61,7 @@ impl MemorySection {
         }
     }
 
-    pub fn offset(self, offset: usize) -> MemorySection {
+    pub fn offset(self, offset: u64) -> MemorySection {
         Self {
             name: self.name,
             origin: self.origin + offset,
@@ -71,7 +71,7 @@ impl MemorySection {
         }
     }
 
-    pub fn pagesize(self, pagesize: usize) -> MemorySection {
+    pub fn pagesize(self, pagesize: u64) -> MemorySection {
         Self {
             name: self.name,
             origin: self.origin,
@@ -90,7 +90,7 @@ impl MemorySection {
     pub fn slot(self, slot: usize, num_slots: usize) -> MemorySection {
         assert!(slot < num_slots);
 
-        fn align_add(val: usize, alignment: usize) -> usize {
+        fn align_add(val: u64, alignment: u64) -> u64 {
             if val % alignment != 0 {
                 (val + alignment) - val % alignment
             } else {
@@ -98,7 +98,7 @@ impl MemorySection {
             }
         }
 
-        fn align_sub(mut val: usize, alignment: usize) -> usize {
+        fn align_sub(mut val: u64, alignment: u64) -> u64 {
             val -= val % alignment;
             val
         }
@@ -107,8 +107,8 @@ impl MemorySection {
         let origin = align_add(self.origin, self.pagesize);
         let end = align_sub(self.origin + self.length, self.pagesize);
 
-        let slot_length = align_sub((end - origin) / num_slots, self.pagesize);
-        let slot_origin = origin + (slot * slot_length);
+        let slot_length = align_sub((end - origin) / num_slots as u64, self.pagesize);
+        let slot_origin = origin + (slot as u64 * slot_length);
 
         Self {
             name: self.name,
@@ -158,14 +158,14 @@ impl MemorySection {
 
         let mut res = self;
         if let Ok(offset) = var(offset_env) {
-            let offset: usize = offset
+            let offset = offset
                 .parse_dec_or_hex()
                 .expect(&format!("parsing {}", &offset_env));
             res = res.offset(offset);
         }
 
         if let Ok(pagesize) = var(pagesize_env) {
-            let pagesize: usize = pagesize
+            let pagesize = pagesize
                 .parse_dec_or_hex()
                 .expect(&format!("parsing {}", &pagesize_env));
             res = res.pagesize(pagesize);
@@ -211,15 +211,15 @@ impl MemorySection {
 
 /// Helper trait to parse strings to usize from both decimal or hex
 trait ParseDecOrHex {
-    fn parse_dec_or_hex(&self) -> Result<usize, ParseIntError>;
+    fn parse_dec_or_hex(&self) -> Result<u64, ParseIntError>;
 }
 
 impl ParseDecOrHex for String {
-    fn parse_dec_or_hex(&self) -> Result<usize, ParseIntError> {
+    fn parse_dec_or_hex(&self) -> Result<u64, ParseIntError> {
         if self.starts_with("0x") {
-            usize::from_str_radix(&self[2..], 16)
+            u64::from_str_radix(&self[2..], 16)
         } else {
-            usize::from_str_radix(self, 10)
+            u64::from_str_radix(self, 10)
         }
     }
 }
