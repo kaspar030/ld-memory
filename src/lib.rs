@@ -123,21 +123,24 @@ impl MemorySection {
     ///
     /// This will evaluate the following environment variables:
     ///
-    /// |Variable            |Default|
-    /// |--------------------|-------|
-    /// |`LDMEMORY_OFFSET`   |      0|
-    /// |`LDMEMORY_PAGESIZE` |      1|
-    /// |`LDMEMORY_NUM_SLOTS`|      2|
-    /// |`LDMEMORY_SLOT`     |   None|
+    /// |Variable              |Default|
+    /// |----------------------|-------|
+    /// |`LDMEMORY_OFFSET`     |      0|
+    /// |`LDMEMORY_PAGESIZE`   |      1|
+    /// |`LDMEMORY_NUM_SLOTS`  |      2|
+    /// |`LDMEMORY_SLOT_OFFSET`|      0|
+    /// |`LDMEMORY_SLOT`       |   None|
     ///
     /// If an offset is given, the whole section will be offset and shortened
     /// by the given value.
     /// If a pagesize is given, the slots will start and end will be aligned at
     /// the pagesize.
-    ///
     /// If a slot number is given, the remaining section will be divided into
     /// `<prefix>_NUM_SLOTS` slots, aligned to `<prefix>_PAGESIZE`, and the
     /// `<prefix>_SLOT`th (starting at 0) will be returned.
+    /// If a slot offset is given, each slot will be offset and shortened by
+    /// that value.
+    ///
     ///
     /// Note: `from_env_with_prefix` can be used to use a different prefix than
     /// the default prefix `LDMEMORY_`.
@@ -155,6 +158,7 @@ impl MemorySection {
         let num_slots_env = &[prefix, "NUM_SLOTS"].join("_");
         let slot_env = &[prefix, "SLOT"].join("_");
         let pagesize_env = &[prefix, "PAGESIZE"].join("_");
+        let slot_offset_env = &[prefix, "SLOT_OFFSET"].join("_");
 
         let mut res = self;
         if let Ok(offset) = var(offset_env) {
@@ -179,8 +183,16 @@ impl MemorySection {
                 .unwrap_or("2".into())
                 .parse()
                 .expect(&format!("parsing {}", &num_slots_env));
+            let slot_offset = var(slot_offset_env)
+                .unwrap_or("0".into())
+                .parse_dec_or_hex()
+                .expect(&format!("parsing {}", &slot_offset_env));
 
             res = res.slot(slot, num_slots);
+
+            if slot_offset > 0 {
+                res = res.offset(slot_offset);
+            }
         }
 
         res
