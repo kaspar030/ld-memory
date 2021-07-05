@@ -268,7 +268,7 @@ mod tests {
         let section = MemorySection::new("SectionName", 0, 0xFFFF);
         assert_eq!(
             section.to_string(),
-            "    SectionName : ORIGIN = 0x00000000, LENGTH = 65535\n"
+            "    SectionName : ORIGIN = 0x0, LENGTH = 0xFFFF\n"
         );
     }
 
@@ -277,7 +277,7 @@ mod tests {
         let section = MemorySection::new("SectionName", 0, 0x10000).offset(0x1000);
         assert_eq!(
             section.to_string(),
-            "    SectionName : ORIGIN = 0x00001000, LENGTH = 61440\n"
+            "    SectionName : ORIGIN = 0x1000, LENGTH = 0xF000\n"
         );
     }
 
@@ -286,7 +286,7 @@ mod tests {
         let section = MemorySection::new("SectionName", 0, 0x10000).attrs("r!w!x");
         assert_eq!(
             section.to_string(),
-            "    SectionName (r!w!x): ORIGIN = 0x00000000, LENGTH = 65536\n"
+            "    SectionName (r!w!x): ORIGIN = 0x0, LENGTH = 0x10000\n"
         );
     }
 
@@ -302,7 +302,7 @@ mod tests {
             memory.to_string(),
             concat!(
                 "MEMORY\n{\n",
-                "    SectionName (rw!x): ORIGIN = 0x00001000, LENGTH = 61440\n",
+                "    SectionName (rw!x): ORIGIN = 0x1000, LENGTH = 0xF000\n",
                 "}\n"
             )
         );
