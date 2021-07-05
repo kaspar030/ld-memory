@@ -1,3 +1,4 @@
+use std::env;
 ///! Create ld memory sections programmaticaly
 ///
 /// This crate can be used in build.rs scripts to replace static memory.x files
@@ -195,6 +196,23 @@ impl MemorySection {
             }
         }
 
+        // If being called by cargo, assume we're running from build.rs.
+        // Thus, print "cargo:rerun..." lines.
+        // Here we're assuming that if both CARGO and OUT_DIR is set, we're in
+        // build.rs.
+        if env::var("CARGO").is_ok() && env::var("OUT_DIR").is_ok() {
+            for var in [
+                offset_env,
+                num_slots_env,
+                slot_env,
+                slot_offset_env,
+                pagesize_env,
+            ]
+            .iter()
+            {
+                println!("cargo:rerun-if-env-changed={}", var);
+            }
+        }
         res
     }
 
