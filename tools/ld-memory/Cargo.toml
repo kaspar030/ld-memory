@@ -1,0 +1,15 @@
+[package]
+name = "ld-memory-cli"
+version = "0.1.0"
+edition = "2021"
+
+
+[[bin]]
+name = "ld-memory"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1.0.71"
+argh = "0.1.10"
+ld-memory.workspace = true
+

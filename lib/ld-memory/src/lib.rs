@@ -240,11 +240,11 @@ impl MemorySection {
 }
 
 /// Helper trait to parse strings to usize from both decimal or hex
-trait ParseDecOrHex {
+pub trait ParseDecOrHex {
     fn parse_dec_or_hex(&self) -> Result<u64, ParseIntError>;
 }
 
-impl ParseDecOrHex for String {
+impl ParseDecOrHex for str {
     fn parse_dec_or_hex(&self) -> Result<u64, ParseIntError> {
         if self.starts_with("0x") {
             u64::from_str_radix(&self[2..], 16)
