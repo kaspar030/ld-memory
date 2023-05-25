@@ -1,6 +1,6 @@
 use argh::FromArgs;
 
-use ld_memory::{Memory, MemorySection, ParseDecOrHex};
+use ld_memory::{Memory, MemorySection};
 
 #[derive(FromArgs)]
 /// A simple memory layout tool.
@@ -21,22 +21,30 @@ fn parse_section(section_str: &str) -> std::result::Result<MemorySection, String
 
     let mut section = MemorySection::new(
         components[0],
-        parse_addr(components[1])?,
-        parse_addr(components[2])?,
+        parse_expr(components[1])?,
+        parse_expr(components[2])?,
     );
 
     if components.len() == 4 {
-        section = section.offset(parse_addr(components[3])?);
+        section = section.offset(parse_expr(components[3])?);
     }
 
     Ok(section)
 }
 
-fn parse_addr(size_str: &str) -> Result<u64, String> {
-    if size_str.is_empty() {
+fn parse_expr(expr: &str) -> Result<u64, String> {
+    if expr.is_empty() {
         return Ok(0);
     }
-    size_str.parse_dec_or_hex().map_err(|e| e.to_string())
+    evalexpr::eval_int(expr)
+        .map_err(|e| e.to_string())
+        .and_then(|v| {
+            if v >= 0 {
+                Ok(v as u64)
+            } else {
+                Err("expression evaluates to negative integer".into())
+            }
+        })
 }
 
 pub fn main() {
