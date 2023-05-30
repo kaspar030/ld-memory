@@ -3,4 +3,4 @@ members = [ "lib/*", "tools/*" ]
 resolver = "2"
 
 [workspace.dependencies]
-ld-memory.path = "lib/ld-memory"
+ld-memory = { path = "lib/ld-memory" }
