@@ -1,6 +1,6 @@
 [package]
 name = "ld-memory"
-version = "0.2.2"
+version = "0.2.3"
 authors = ["Kaspar Schleiser <kaspar@schleiser.de>"]
 edition = "2018"
 description = "Helper crate to programmatically create GNU ld MEMORY blocks"
