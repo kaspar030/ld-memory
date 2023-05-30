@@ -30,7 +30,27 @@ impl Memory {
     }
 
     pub fn to_string(&self) -> String {
-        let mut out = String::from("MEMORY\n{\n");
+        let mut out = String::new();
+
+        // create symbols for each section start and length
+        for section in &self.sections {
+            out.push_str(&format!(
+                "_{}_start = {:#X};\n",
+                section.name, section.origin
+            ));
+            out.push_str(&format!(
+                "_{}_length = {:#X};\n",
+                section.name, section.length
+            ));
+        }
+
+        // if there was a section, add an empty line. all for pleasing human
+        // readers.
+        if !&self.sections.is_empty() {
+            out.push_str("\n");
+        }
+
+        out.push_str("MEMORY\n{\n");
         for section in &self.sections {
             out.push_str(&section.to_string());
         }
