@@ -2,7 +2,8 @@
 name = "ld-memory-cli"
 version = "0.1.0"
 edition = "2021"
-
+description = "tool to create .ld MEMORY sections via cli"
+authors = [ "Kaspar Schleiser <kaspar@schleiser.de>" ]
 
 [[bin]]
 name = "ld-memory"
@@ -13,4 +14,3 @@ anyhow = "1.0.71"
 argh = "0.1.10"
 evalexpr = { git = "https://github.com/kaspar030/evalexpr", branch = "add_hex_integers" }
 ld-memory.workspace = true
-
