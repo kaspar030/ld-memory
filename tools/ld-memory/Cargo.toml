@@ -1,9 +1,9 @@
 [package]
 name = "ld-memory-cli"
-version = "0.1.0"
-edition = "2021"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
 description = "tool to create .ld MEMORY sections via cli"
-authors = [ "Kaspar Schleiser <kaspar@schleiser.de>" ]
 
 [[bin]]
 name = "ld-memory"

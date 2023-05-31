@@ -321,6 +321,9 @@ mod tests {
         assert_eq!(
             memory.to_string(),
             concat!(
+                "_SectionName_start = 0x1000;\n",
+                "_SectionName_length = 0xF000;\n",
+                "\n",
                 "MEMORY\n{\n",
                 "    SectionName (rw!x): ORIGIN = 0x1000, LENGTH = 0xF000\n",
                 "}\n"
