@@ -36,6 +36,9 @@ fn parse_expr(expr: &str) -> Result<u64, String> {
     if expr.is_empty() {
         return Ok(0);
     }
+
+    let expr = &apply_kilobyte(expr);
+
     evalexpr::eval_int(expr)
         .map_err(|e| e.to_string())
         .and_then(|v| {
@@ -45,6 +48,40 @@ fn parse_expr(expr: &str) -> Result<u64, String> {
                 Err("expression evaluates to negative integer".into())
             }
         })
+}
+
+fn apply_kilobyte(s: &str) -> String {
+    let mut result = String::new();
+    let mut chars = s.chars().peekable();
+
+    while let Some(c) = chars.next() {
+        if c.is_digit(10) {
+            let mut num_str = String::new();
+            num_str.push(c);
+
+            while let Some(next_c) = chars.peek() {
+                if next_c.is_digit(10) {
+                    num_str.push(*next_c);
+                    chars.next();
+                } else {
+                    break;
+                }
+            }
+
+            if let Some('K') = chars.peek() {
+                chars.next();
+                let num = num_str.parse::<i32>().unwrap();
+                let replacement = format!("({} * 1024)", num);
+                result.push_str(&replacement);
+            } else {
+                result.push_str(&num_str);
+            }
+        } else {
+            result.push(c);
+        }
+    }
+
+    result
 }
 
 pub fn main() {
