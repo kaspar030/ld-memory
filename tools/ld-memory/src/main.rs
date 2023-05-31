@@ -5,10 +5,16 @@ use ld_memory::{Memory, MemorySection};
 #[derive(FromArgs)]
 /// A simple memory layout tool.
 struct Args {
-    #[argh(option, long = "section", short = 's', from_str_fn(parse_section))]
+    #[argh(
+        option,
+        long = "section",
+        short = 's',
+        from_str_fn(parse_section),
+        arg_name = "<NAME>:<START>:<SIZE>[:<OFFSET>]"
+    )]
     /// specify sections
     pub sections: Vec<MemorySection>,
-    #[argh(option, long = "include", short = 'i')]
+    #[argh(option, long = "include", short = 'i', arg_name = "FILE")]
     /// specify additional files to INCLUDE
     pub includes: Vec<String>,
 }
