@@ -1,8 +1,8 @@
 [package]
 name = "ld-memory"
-version.workspace = true
-authors.workspace = true
-edition.workspace = true
+version = "0.2.4"
+authors = [ "Kaspar Schleiser <kaspar@schleiser.de>" ]
+edition = "2021"
 description = "Helper crate to programmatically create GNU ld MEMORY blocks"
 license = "MIT OR Apache-2.0"
 categories = ["development-tools::build-utils"]

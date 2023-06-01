@@ -1,12 +1,6 @@
 [workspace]
 members = [ "lib/*", "tools/*" ]
 resolver = "2"
-package.version = "0.2.4"
-package.authors = ["Kaspar Schleiser <kaspar@schleiser.de>"]
-package.edition = "2021"
-
-[workspace.dependencies]
-ld-memory = { path = "lib/ld-memory" }
 
 [workspace.metadata.release]
 sign-commit = true

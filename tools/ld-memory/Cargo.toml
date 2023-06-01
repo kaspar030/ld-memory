@@ -1,9 +1,12 @@
 [package]
 name = "ld-memory-cli"
-version.workspace = true
-edition.workspace = true
-authors.workspace = true
+version = "0.2.4"
+authors = [ "Kaspar Schleiser <kaspar@schleiser.de>" ]
+edition = "2021"
 description = "tool to create .ld MEMORY sections via cli"
+repository = "https://github.com/kaspar030/ld-memory"
+license = "Apache-2.0"
+readme = "README.md"
 
 [[bin]]
 name = "ld-memory"
@@ -13,4 +16,4 @@ path = "src/main.rs"
 anyhow = "1.0.71"
 argh = "0.1.10"
 evalexpr = "11.0.0"
-ld-memory.workspace = true
+ld-memory = { version = "0.2.4", path = "../../lib/ld-memory" }
