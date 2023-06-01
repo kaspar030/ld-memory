@@ -5,7 +5,7 @@ line.
 
 ## Installation
 
-    cargo install --git https://github.com/kaspar030/ld-memory
+    cargo install ld-memory-cli
 
 ## Usage
 
