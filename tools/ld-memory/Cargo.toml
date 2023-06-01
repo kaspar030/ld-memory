@@ -12,5 +12,5 @@ path = "src/main.rs"
 [dependencies]
 anyhow = "1.0.71"
 argh = "0.1.10"
-evalexpr = { git = "https://github.com/kaspar030/evalexpr", branch = "add_hex_integers" }
+evalexpr = "11.0.0"
 ld-memory.workspace = true
