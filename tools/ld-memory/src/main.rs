@@ -10,7 +10,7 @@ struct Args {
         long = "section",
         short = 's',
         from_str_fn(parse_section),
-        arg_name = "<NAME>:<START>:<SIZE>[:<OFFSET>]"
+        arg_name = "<NAME> [(attrs)]:<START>:<SIZE>[:<OFFSET>]"
     )]
     /// specify sections
     pub sections: Vec<MemorySection>,
@@ -19,17 +19,32 @@ struct Args {
     pub includes: Vec<String>,
 }
 
+fn parse_name_attrs(input: &str) -> (&str, &str) {
+    let start_index = input.find('(');
+    let end_index = input.rfind(')');
+
+    if let (Some(start), Some(end)) = (start_index, end_index) {
+        let name = &input[..start];
+        let value = &input[start + 1..end];
+        (name.trim(), value)
+    } else {
+        (input, "")
+    }
+}
+
 fn parse_section(section_str: &str) -> std::result::Result<MemorySection, String> {
     let components = section_str.split(":").collect::<Vec<&str>>();
     if components.len() < 3 {
         return Err("invalid section spec (\"<NAME>:<START>:<SIZE>[:<OFFSET>]\")".into());
     }
 
-    let mut section = MemorySection::new(
-        components[0],
-        parse_expr(components[1])?,
-        parse_expr(components[2])?,
-    );
+    let (name, attrs) = parse_name_attrs(components[0]);
+    let mut section =
+        MemorySection::new(name, parse_expr(components[1])?, parse_expr(components[2])?);
+
+    if !attrs.is_empty() {
+        section = section.attrs(attrs);
+    }
 
     if components.len() == 4 {
         section = section.offset(parse_expr(components[3])?);
