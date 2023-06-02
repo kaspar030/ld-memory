@@ -1,6 +1,6 @@
 [package]
 name = "ld-memory-cli"
-version = "0.2.5"
+version = "0.2.6"
 authors = [ "Kaspar Schleiser <kaspar@schleiser.de>" ]
 edition = "2021"
 description = "tool to create .ld MEMORY sections via cli"
