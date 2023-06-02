@@ -6,7 +6,7 @@ on:
     branches:
       - "main"
     tags:
-      - "ld-memory-cli-[0-9]+.*.*"
+      - "[0-9]+.*.*"
 
 jobs:
   container:
@@ -26,9 +26,9 @@ jobs:
           # generate Docker tags based on the following events/attributes
           tags: |
             type=ref,event=branch
-            type=semver,pattern=ld-memory-cli-{{version}},latest={{ env.LATEST }}
-            type=semver,pattern=ld-memory-cli-{{major}}.{{minor}}
-            type=semver,pattern=ld-memory-cli-{{major}}
+            type=semver,pattern={{version}},latest={{ env.LATEST }}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
             type=sha
           flavor: |
             latest=auto
