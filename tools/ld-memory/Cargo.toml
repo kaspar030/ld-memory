@@ -1,6 +1,6 @@
 [package]
 name = "ld-memory-cli"
-version = "0.2.7"
+version = "0.2.8"
 authors = [ "Kaspar Schleiser <kaspar@schleiser.de>" ]
 edition = "2021"
 description = "tool to create .ld MEMORY sections via cli"
@@ -16,7 +16,7 @@ path = "src/main.rs"
 anyhow = "1.0.71"
 argh = "0.1.10"
 evalexpr = "11.0.0"
-ld-memory = { version = "0.2.7", path = "../../lib/ld-memory" }
+ld-memory = { version = "0.2.9", path = "../../lib/ld-memory" }
 
 [package.metadata.release]
 tag-name = "{{version}}"
