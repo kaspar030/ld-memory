@@ -1,6 +1,6 @@
 [package]
 name = "ld-memory"
-version = "0.2.7"
+version = "0.2.8"
 authors = [ "Kaspar Schleiser <kaspar@schleiser.de>" ]
 edition = "2021"
 description = "Helper crate to programmatically create GNU ld MEMORY blocks"
@@ -10,3 +10,6 @@ readme = "README.md"
 repository = "https://github.com/kaspar030/ld-memory"
 
 [dependencies]
+
+[features]
+build-rs = []

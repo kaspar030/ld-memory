@@ -61,6 +61,17 @@ impl Memory {
     pub fn to_file<P: AsRef<Path>>(&self, path: P) -> std::io::Result<()> {
         std::fs::write(path, self.to_string())
     }
+
+    #[cfg(feature = "build-rs")]
+    pub fn to_cargo_outdir(&self, filename: &str) -> std::io::Result<()> {
+        use std::path::PathBuf;
+
+        let out = &PathBuf::from(env::var_os("OUT_DIR").unwrap());
+        self.to_file(out.join(filename))?;
+
+        println!("cargo:rustc-link-search={}", out.display());
+        Ok(())
+    }
 }
 
 pub struct MemorySection {
