@@ -12,6 +12,7 @@ use std::num::ParseIntError;
 use std::path::Path;
 use std::result::Result;
 
+#[derive(Debug)]
 pub struct Memory {
     sections: Vec<MemorySection>,
 }
@@ -74,6 +75,7 @@ impl Memory {
     }
 }
 
+#[derive(Debug)]
 pub struct MemorySection {
     name: String,
     attrs: Option<String>,
