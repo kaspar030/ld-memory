@@ -7,13 +7,13 @@ description = "tool to create .ld MEMORY sections via cli"
 repository = "https://github.com/kaspar030/ld-memory"
 license = "Apache-2.0"
 readme = "README.md"
+rust-version = "1.78"
 
 [[bin]]
 name = "ld-memory"
 path = "src/main.rs"
 
 [dependencies]
-anyhow = "1.0.71"
 argh = "0.1.10"
 evalexpr = "11.0.0"
 ld-memory = { version = "0.2.9", path = "../../lib/ld-memory" }
