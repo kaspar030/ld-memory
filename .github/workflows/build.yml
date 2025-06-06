@@ -1,0 +1,104 @@
+name: CI
+
+on:
+  push:
+    branches:
+    - main
+  pull_request:
+    branches:
+    - main
+
+jobs:
+  udeps:
+    runs-on: ubuntu
+    env:
+      RUSTC_WRAPPER: "sccache"
+    steps:
+    - name: Check out repository code
+      uses: actions/checkout@v4
+
+    - name: rust cache
+      uses: Swatinem/rust-cache@v2
+
+    - name: Run sccache-cache
+      uses: mozilla-actions/sccache-action@v0.0.8
+
+    - name: Install latest nightly
+      uses: dtolnay/rust-toolchain@nightly
+
+    - uses: taiki-e/install-action@v2
+      with:
+        tool: cargo-binstall
+
+    - name: "installing cargo-udeps"
+      run: cargo binstall -y --no-symlinks --force cargo-udeps
+
+    - name: "checking for unused dependencies"
+      run: cargo +nightly udeps
+
+  msrv:
+    runs-on: ubuntu
+    env:
+      RUSTC_WRAPPER: "sccache"
+    steps:
+    - name: Check out repository code
+      uses: actions/checkout@v4
+
+    - name: rust cache
+      uses: Swatinem/rust-cache@v2
+
+    - name: Run sccache-cache
+      uses: mozilla-actions/sccache-action@v0.0.8
+
+    - uses: taiki-e/install-action@v2
+      with:
+        tool: cargo-binstall
+
+    - name: "Installing cargo-udeps"
+      run: cargo binstall -y --no-symlinks --force cargo-msrv
+
+    - name: "Verifying MSRV for lib"
+      run: cd lib/ld-memory && cargo msrv verify
+
+    - name: "Verifying MSRV for tool"
+      run: cd tools/ld-memory && cargo msrv verify
+
+  test:
+    strategy:
+      matrix:
+        toolchain: [ nightly, stable ]
+    runs-on: ubuntu
+    env:
+      CARGO_INCREMENTAL: 0
+      RUSTC_WRAPPER: "sccache"
+
+    # this strips the date suffix from the github job name so we don't have to
+    # touch our required statusses list.
+    name: test (${{ startsWith(matrix.toolchain, 'nightly') && 'nightly' || matrix.toolchain }})
+
+    steps:
+    - name: Check out repository code
+      uses: actions/checkout@v4
+
+    - name: rust cache
+      uses: Swatinem/rust-cache@v2
+      with:
+        key: "${{ matrix.toolchain }}"
+        cache-directories: /home/runner/.rustup
+
+    - uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: ${{ matrix.toolchain }}
+
+    - name: Run sccache-cache
+      uses: mozilla-actions/sccache-action@v0.0.8
+
+    - uses: taiki-e/install-action@v2
+      with:
+        tool: cargo-binstall
+
+    - name: "build"
+      run: "cargo +${{ matrix.toolchain }} build"
+
+    - name: "unittests"
+      run: "cargo +${{ matrix.toolchain }} test"
