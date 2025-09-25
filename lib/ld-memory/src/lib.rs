@@ -1,4 +1,3 @@
-use std::env;
 ///! Create ld memory sections programmaticaly
 ///
 /// This crate can be used in build.rs scripts to replace static memory.x files
@@ -8,26 +7,27 @@ use std::env;
 /// the remaining flash memory into "slots" for an active/passive updating
 /// scheme.
 ///
+use std::env;
 use std::num::ParseIntError;
 use std::path::Path;
 use std::result::Result;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Memory {
     sections: Vec<MemorySection>,
+    partitions: Vec<MemoryPartitions>,
 }
 
 impl Memory {
     pub fn new() -> Memory {
         Memory {
-            sections: Vec::new(),
+            ..Default::default()
         }
     }
 
-    pub fn add_section(self, section: MemorySection) -> Memory {
-        let mut sections = self.sections;
-        sections.push(section);
-        Memory { sections }
+    pub fn add_section(mut self, section: MemorySection) -> Memory {
+        self.sections.push(section);
+        self
     }
 
     pub fn to_string(&self) -> String {
@@ -47,7 +47,7 @@ impl Memory {
 
         // if there was a section, add an empty line. all for pleasing human
         // readers.
-        if !&self.sections.is_empty() {
+        if !(self.sections.is_empty()) {
             out.push_str("\n");
         }
 
@@ -73,6 +73,11 @@ impl Memory {
         println!("cargo:rustc-link-search={}", out.display());
         Ok(())
     }
+
+    pub fn add_partitions(mut self, partitions: MemoryPartitions) -> Self {
+        self.sections.extend(partitions.build());
+        self
+    }
 }
 
 #[derive(Debug)]
@@ -97,22 +102,14 @@ impl MemorySection {
 
     pub fn offset(self, offset: u64) -> MemorySection {
         Self {
-            name: self.name,
             origin: self.origin + offset,
             length: self.length - offset,
-            attrs: self.attrs,
-            pagesize: self.pagesize,
+            ..self
         }
     }
 
     pub fn pagesize(self, pagesize: u64) -> MemorySection {
-        Self {
-            name: self.name,
-            origin: self.origin,
-            length: self.length,
-            attrs: self.attrs,
-            pagesize,
-        }
+        Self { pagesize, ..self }
     }
 
     /// Divide memory section into slots.
@@ -123,19 +120,6 @@ impl MemorySection {
     /// `slot` starts at zero for the first slot.
     pub fn slot(self, slot: usize, num_slots: usize) -> MemorySection {
         assert!(slot < num_slots);
-
-        fn align_add(val: u64, alignment: u64) -> u64 {
-            if val % alignment != 0 {
-                (val + alignment) - val % alignment
-            } else {
-                val
-            }
-        }
-
-        fn align_sub(mut val: u64, alignment: u64) -> u64 {
-            val -= val % alignment;
-            val
-        }
 
         // ensure both start and end are aligned with the pagesize
         let origin = align_add(self.origin, self.pagesize);
@@ -272,6 +256,149 @@ impl MemorySection {
     }
 }
 
+#[derive(Default, Debug)]
+pub struct MemoryPartitions {
+    origin: u64,
+    length: u64,
+    pagesize: u64,
+    default_page_aligned: bool,
+    partitions: Vec<MemoryPartition>,
+}
+
+impl MemoryPartitions {
+    pub fn new(origin: u64, length: u64) -> Self {
+        Self {
+            origin,
+            length,
+            pagesize: 1,
+            default_page_aligned: true,
+            partitions: Vec::new(),
+        }
+    }
+
+    pub fn pagesize(self, pagesize: u64) -> Self {
+        Self { pagesize, ..self }
+    }
+
+    pub fn page_align_default(self, default_page_aligned: bool) -> Self {
+        Self {
+            default_page_aligned,
+            ..self
+        }
+    }
+
+    pub fn add_partition(mut self, partition: MemoryPartition) -> Self {
+        self.partitions.push(partition);
+        self
+    }
+
+    pub fn build(mut self) -> Vec<MemorySection> {
+        let mut sections = Vec::new();
+        let mut at_start = Vec::new();
+        let mut current = Vec::new();
+        let mut at_end = Vec::new();
+
+        let mut left = self.length;
+        let mut at_end_len = 0;
+        let mut have_use_leftover = false;
+
+        for partition in self.partitions.iter_mut() {
+            println!(
+                "{} use_leftover: {}",
+                partition.name, partition.use_leftover
+            );
+            if partition.use_leftover {
+                if have_use_leftover {
+                    panic!("can only have one partition using leftover space!");
+                } else {
+                    have_use_leftover = true;
+                }
+            } else {
+                let mut partition_size = partition.size;
+                if self.default_page_aligned {
+                    partition_size = partition_size.max(partition.size_pages * self.pagesize);
+                    align_in_place(&mut partition_size, self.pagesize);
+                    partition.size = partition_size;
+                }
+
+                left = left.checked_sub(partition.size).unwrap();
+            }
+
+            match partition.location {
+                Location::AtStart => {
+                    at_start.push(partition);
+                }
+                Location::AtEnd => {
+                    at_end_len += partition.size;
+                    at_end.push(partition);
+                }
+                Location::CurrentPosition => {
+                    current.push(partition);
+                }
+            }
+        }
+
+        let mut pos = self.origin;
+
+        for partition in at_start.iter_mut().chain(&mut current).chain(&mut at_end) {
+            if partition.use_leftover {
+                eprintln!("left: {left}");
+                partition.size = align_sub(left, self.pagesize);
+            }
+
+            let section = MemorySection::new(&partition.name, pos, partition.size);
+            sections.push(section);
+            pos += partition.size;
+        }
+
+        sections
+    }
+}
+
+#[derive(Default, Debug)]
+pub struct MemoryPartition {
+    name: String,
+    location: Location,
+    size: u64,
+    size_pages: u64,
+    use_leftover: bool,
+}
+
+impl MemoryPartition {
+    pub fn new(name: &str) -> Self {
+        Self {
+            name: name.into(),
+            ..Default::default()
+        }
+    }
+
+    pub fn size(self, size: u64) -> Self {
+        Self { size, ..self }
+    }
+
+    pub fn size_leftover(self) -> Self {
+        Self {
+            use_leftover: true,
+            ..self
+        }
+    }
+    pub fn size_pages(self, size_pages: u64) -> Self {
+        Self { size_pages, ..self }
+    }
+
+    pub fn location(self, location: Location) -> Self {
+        Self { location, ..self }
+    }
+}
+
+#[derive(Default, Debug)]
+pub enum Location {
+    #[default]
+    CurrentPosition,
+    AtStart,
+    AtEnd,
+}
+
 /// Helper trait to parse strings to usize from both decimal or hex
 pub trait ParseDecOrHex {
     fn parse_dec_or_hex(&self) -> Result<u64, ParseIntError>;
@@ -378,7 +505,7 @@ pub mod parse {
 
 #[cfg(test)]
 mod tests {
-    use super::{Memory, MemorySection};
+    use super::{Location, Memory, MemoryPartition, MemoryPartitions, MemorySection};
     #[test]
     fn basic_memory() {
         let memory = Memory::new();
@@ -431,5 +558,72 @@ mod tests {
                 "}\n"
             )
         );
+    }
+
+    #[test]
+    fn partitions() {
+        let memory = Memory::new().add_partitions(
+            MemoryPartitions::new(0, 0x10000)
+                .pagesize(4096)
+                .page_align_default(true)
+                .add_partition(
+                    MemoryPartition::new("BOOTLOADER")
+                        .size(1024)
+                        .location(Location::AtStart),
+                )
+                .add_partition(MemoryPartition::new("APPLICATION").size_leftover())
+                .add_partition(
+                    MemoryPartition::new("DFU_EXTRA")
+                        .size_pages(1)
+                        .location(Location::AtEnd),
+                )
+                .add_partition(
+                    MemoryPartition::new("STORAGE")
+                        .size(2048)
+                        .size_pages(2)
+                        .location(Location::AtEnd),
+                ),
+        );
+
+        // MemorySection::new("SectionName", 0, 0x10000)
+        //     .offset(0x1000)
+        //     .attrs("rw!x"),
+        // );
+
+        assert_eq!(
+            memory.to_string(),
+            concat!(
+                "_SectionName_start = 0x1000;\n",
+                "_SectionName_length = 0xF000;\n",
+                "\n",
+                "MEMORY\n{\n",
+                "    SectionName (rw!x): ORIGIN = 0x1000, LENGTH = 0xF000\n",
+                "}\n"
+            )
+        );
+    }
+}
+
+fn align_add(val: u64, alignment: u64) -> u64 {
+    if val % alignment != 0 {
+        (val + alignment) - val % alignment
+    } else {
+        val
+    }
+}
+
+fn align_sub(mut val: u64, alignment: u64) -> u64 {
+    val -= val % alignment;
+    val
+}
+
+fn align_in_place(val: &mut u64, alignment: u64) -> u64 {
+    if *val % alignment == 0 {
+        0
+    } else {
+        let aligned = *val + alignment - *val % alignment;
+        let misalign = aligned - *val;
+        *val = aligned;
+        misalign
     }
 }
