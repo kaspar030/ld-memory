@@ -84,6 +84,12 @@ pub struct MemorySection {
     pagesize: u64,
 }
 
+impl Default for Memory {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl MemorySection {
     pub fn new(name: &str, origin: u64, length: u64) -> MemorySection {
         Self {
