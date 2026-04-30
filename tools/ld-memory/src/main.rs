@@ -27,7 +27,7 @@ pub fn main() {
         memory = memory.add_section(section);
     }
 
-    println!("{}", memory.to_string());
+    println!("{}", memory.to_ldmemory());
 
     for include in args.includes {
         println!("INCLUDE {include}");
