@@ -47,7 +47,7 @@ impl Memory {
         // if there was a section, add an empty line. all for pleasing human
         // readers.
         if !&self.sections.is_empty() {
-            out.push_str("\n");
+            out.push('\n');
         }
 
         out.push_str("MEMORY\n{\n");
