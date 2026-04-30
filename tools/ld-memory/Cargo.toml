@@ -2,12 +2,12 @@
 name = "ld-memory-cli"
 version = "0.2.8"
 authors = [ "Kaspar Schleiser <kaspar@schleiser.de>" ]
-edition = "2021"
+edition = "2024"
 description = "tool to create .ld MEMORY sections via cli"
 repository = "https://github.com/kaspar030/ld-memory"
 license = "Apache-2.0"
 readme = "README.md"
-rust-version = "1.78"
+rust-version = "1.85"
 
 [[bin]]
 name = "ld-memory"
