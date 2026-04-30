@@ -30,7 +30,7 @@ impl Memory {
         Memory { sections }
     }
 
-    pub fn to_string(&self) -> String {
+    pub fn to_ldmemory(&self) -> String {
         let mut out = String::new();
 
         // create symbols for each section start and length
@@ -53,14 +53,14 @@ impl Memory {
 
         out.push_str("MEMORY\n{\n");
         for section in &self.sections {
-            out.push_str(&section.to_string());
+            out.push_str(&section.to_ldmemory());
         }
         out.push_str("}\n");
         out
     }
 
     pub fn to_file<P: AsRef<Path>>(&self, path: P) -> std::io::Result<()> {
-        std::fs::write(path, self.to_string())
+        std::fs::write(path, self.to_ldmemory())
     }
 
     #[cfg(feature = "build-rs")]
@@ -259,7 +259,7 @@ impl MemorySection {
         }
     }
 
-    pub fn to_string(&self) -> String {
+    pub fn to_ldmemory(&self) -> String {
         format!(
             "    {} {}: ORIGIN = {:#X}, LENGTH = {:#X}\n",
             self.name,
@@ -382,14 +382,14 @@ mod tests {
     #[test]
     fn basic_memory() {
         let memory = Memory::new();
-        assert_eq!(memory.to_string(), "MEMORY\n{\n}\n");
+        assert_eq!(memory.to_ldmemory(), "MEMORY\n{\n}\n");
     }
 
     #[test]
     fn basic_section() {
         let section = MemorySection::new("SectionName", 0, 0xFFFF);
         assert_eq!(
-            section.to_string(),
+            section.to_ldmemory(),
             "    SectionName : ORIGIN = 0x0, LENGTH = 0xFFFF\n"
         );
     }
@@ -398,7 +398,7 @@ mod tests {
     fn section_offset() {
         let section = MemorySection::new("SectionName", 0, 0x10000).offset(0x1000);
         assert_eq!(
-            section.to_string(),
+            section.to_ldmemory(),
             "    SectionName : ORIGIN = 0x1000, LENGTH = 0xF000\n"
         );
     }
@@ -407,7 +407,7 @@ mod tests {
     fn section_attrs() {
         let section = MemorySection::new("SectionName", 0, 0x10000).attrs("r!w!x");
         assert_eq!(
-            section.to_string(),
+            section.to_ldmemory(),
             "    SectionName (r!w!x): ORIGIN = 0x0, LENGTH = 0x10000\n"
         );
     }
@@ -421,7 +421,7 @@ mod tests {
         );
 
         assert_eq!(
-            memory.to_string(),
+            memory.to_ldmemory(),
             concat!(
                 "_SectionName_start = 0x1000;\n",
                 "_SectionName_length = 0xF000;\n",

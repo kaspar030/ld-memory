@@ -18,7 +18,7 @@ pub fn main() {
         .add_section(MemorySection::new("FLASH", 0, 0x40000))
         .add_section(MemorySection::new("RAM", 0x20000000, 0x10000));
 
-    println!("{}", memory.to_string());
+    println!("{}", memory.to_ldmemory());
 }
 ```
 
