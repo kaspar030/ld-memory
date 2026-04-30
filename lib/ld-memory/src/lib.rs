@@ -284,10 +284,10 @@ pub trait ParseDecOrHex {
 
 impl ParseDecOrHex for str {
     fn parse_dec_or_hex(&self) -> Result<u64, ParseIntError> {
-        if self.starts_with("0x") {
-            u64::from_str_radix(&self[2..], 16)
+        if let Some(hex) = self.strip_prefix("0x") {
+            u64::from_str_radix(hex, 16)
         } else {
-            u64::from_str_radix(self, 10)
+            self.parse::<u64>()
         }
     }
 }
