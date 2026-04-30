@@ -351,12 +351,12 @@ pub mod parse {
         let mut chars = s.chars().peekable();
 
         while let Some(c) = chars.next() {
-            if c.is_digit(10) {
+            if c.is_ascii_digit() {
                 let mut num_str = String::new();
                 num_str.push(c);
 
                 while let Some(next_c) = chars.peek() {
-                    if next_c.is_digit(10) {
+                    if next_c.is_ascii_digit() {
                         num_str.push(*next_c);
                         chars.next();
                     } else {
