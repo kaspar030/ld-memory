@@ -203,29 +203,29 @@ impl MemorySection {
         if let Ok(offset) = var(offset_env) {
             let offset = offset
                 .parse_dec_or_hex()
-                .expect(&format!("parsing {}", &offset_env));
+                .unwrap_or_else(|_| panic!("parsing {}", &offset_env));
             res = res.offset(offset);
         }
 
         if let Ok(pagesize) = var(pagesize_env) {
             let pagesize = pagesize
                 .parse_dec_or_hex()
-                .expect(&format!("parsing {}", &pagesize_env));
+                .unwrap_or_else(|_| panic!("parsing {}", &pagesize_env));
             res = res.pagesize(pagesize);
         }
 
         if let Ok(slot) = var(slot_env) {
             let slot: usize = slot
                 .parse::<usize>()
-                .expect(&format!("parsing {}", slot_env));
+                .unwrap_or_else(|_| panic!("parsing {}", slot_env));
             let num_slots: usize = var(num_slots_env)
                 .unwrap_or("2".into())
                 .parse()
-                .expect(&format!("parsing {}", &num_slots_env));
+                .unwrap_or_else(|_| panic!("parsing {}", &num_slots_env));
             let slot_offset = var(slot_offset_env)
                 .unwrap_or("0".into())
                 .parse_dec_or_hex()
-                .expect(&format!("parsing {}", &slot_offset_env));
+                .unwrap_or_else(|_| panic!("parsing {}", &slot_offset_env));
 
             res = res.slot(slot, num_slots);
 
