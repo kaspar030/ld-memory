@@ -90,7 +90,7 @@ impl Default for Memory {
 }
 
 impl MemorySection {
-    pub fn new(name: &str, origin: u64, length: u64) -> MemorySection {
+    pub fn new(name: impl Into<String>, origin: u64, length: u64) -> MemorySection {
         Self {
             name: name.into(),
             origin,
