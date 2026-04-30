@@ -1,13 +1,12 @@
+//! Create ld memory sections programmaticaly
+//!
+//! This crate can be used in build.rs scripts to replace static memory.x files
+//! often used in MCU peripheral access crates.
+//!
+//! It was first built to allow specifying a bootloader offset and splitting
+//! the remaining flash memory into "slots" for an active/passive updating
+//! scheme.
 use std::env;
-///! Create ld memory sections programmaticaly
-///
-/// This crate can be used in build.rs scripts to replace static memory.x files
-/// often used in MCU peripheral access crates.
-///
-/// It was first built to allow specifying a bootloader offset and splitting
-/// the remaining flash memory into "slots" for an active/passive updating
-/// scheme.
-///
 use std::num::ParseIntError;
 use std::path::Path;
 use std::result::Result;
