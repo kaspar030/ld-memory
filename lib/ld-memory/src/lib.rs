@@ -33,16 +33,14 @@ impl Memory {
         let mut out = String::new();
 
         // create symbols for each section start and length
-        for section in &self.sections {
-            out.push_str(&format!(
-                "_{}_start = {:#X};\n",
-                section.name, section.origin
-            ));
-            out.push_str(&format!(
-                "_{}_length = {:#X};\n",
-                section.name, section.length
-            ));
-        }
+        out.extend(self.sections.iter().flat_map(|section| {
+            [
+                section.ldmemory_start_symbol(),
+                "\n".into(),
+                section.ldmemory_length_symbol(),
+                "\n".into(),
+            ]
+        }));
 
         // if there was a section, add an empty line. all for pleasing human
         // readers.
