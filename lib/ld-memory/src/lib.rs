@@ -45,7 +45,7 @@ impl Memory {
         // if there was a section, add an empty line. all for pleasing human
         // readers.
         if !&self.sections.is_empty() {
-            out.push_str("\n");
+            out.push('\n');
         }
 
         out.push_str("MEMORY\n{\n");
@@ -201,29 +201,29 @@ impl MemorySection {
         if let Ok(offset) = var(offset_env) {
             let offset = offset
                 .parse_dec_or_hex()
-                .expect(&format!("parsing {}", &offset_env));
+                .unwrap_or_else(|_| panic!("parsing {}", &offset_env));
             res = res.offset(offset);
         }
 
         if let Ok(pagesize) = var(pagesize_env) {
             let pagesize = pagesize
                 .parse_dec_or_hex()
-                .expect(&format!("parsing {}", &pagesize_env));
+                .unwrap_or_else(|_| panic!("parsing {}", &pagesize_env));
             res = res.pagesize(pagesize);
         }
 
         if let Ok(slot) = var(slot_env) {
             let slot: usize = slot
                 .parse::<usize>()
-                .expect(&format!("parsing {}", slot_env));
+                .unwrap_or_else(|_| panic!("parsing {}", slot_env));
             let num_slots: usize = var(num_slots_env)
                 .unwrap_or("2".into())
                 .parse()
-                .expect(&format!("parsing {}", &num_slots_env));
+                .unwrap_or_else(|_| panic!("parsing {}", &num_slots_env));
             let slot_offset = var(slot_offset_env)
                 .unwrap_or("0".into())
                 .parse_dec_or_hex()
-                .expect(&format!("parsing {}", &slot_offset_env));
+                .unwrap_or_else(|_| panic!("parsing {}", &slot_offset_env));
 
             res = res.slot(slot, num_slots);
 
@@ -326,10 +326,10 @@ pub trait ParseDecOrHex {
 
 impl ParseDecOrHex for str {
     fn parse_dec_or_hex(&self) -> Result<u64, ParseIntError> {
-        if self.starts_with("0x") {
-            u64::from_str_radix(&self[2..], 16)
+        if let Some(hex) = self.strip_prefix("0x") {
+            u64::from_str_radix(hex, 16)
         } else {
-            u64::from_str_radix(self, 10)
+            self.parse::<u64>()
         }
     }
 }
@@ -393,12 +393,12 @@ pub mod parse {
         let mut chars = s.chars().peekable();
 
         while let Some(c) = chars.next() {
-            if c.is_digit(10) {
+            if c.is_ascii_digit() {
                 let mut num_str = String::new();
                 num_str.push(c);
 
                 while let Some(next_c) = chars.peek() {
-                    if next_c.is_digit(10) {
+                    if next_c.is_ascii_digit() {
                         num_str.push(*next_c);
                         chars.next();
                     } else {
