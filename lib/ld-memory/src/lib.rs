@@ -33,16 +33,14 @@ impl Memory {
         let mut out = String::new();
 
         // create symbols for each section start and length
-        for section in &self.sections {
-            out.push_str(&format!(
-                "_{}_start = {:#X};\n",
-                section.name, section.origin
-            ));
-            out.push_str(&format!(
-                "_{}_length = {:#X};\n",
-                section.name, section.length
-            ));
-        }
+        out.extend(self.sections.iter().flat_map(|section| {
+            [
+                section.ldmemory_start_symbol(),
+                "\n".into(),
+                section.ldmemory_length_symbol(),
+                "\n".into(),
+            ]
+        }));
 
         // if there was a section, add an empty line. all for pleasing human
         // readers.
@@ -274,6 +272,50 @@ impl MemorySection {
             self.origin,
             self.length
         )
+    }
+
+    /// Creates a `String` with symbol for the start of the section
+    ///
+    /// ```
+    /// # use ld_memory::MemorySection;
+    /// let section = MemorySection::new("FLASH", 0, 4096);
+    /// assert_eq!(section.start_symbol(), "_FLASH_start");
+    /// ```
+    pub fn start_symbol(&self) -> String {
+        format!("_{}_start", self.name)
+    }
+
+    /// Creates a `String` with symbol for the length of the section
+    ///
+    /// ```
+    /// # use ld_memory::MemorySection;
+    /// let section = MemorySection::new("FLASH", 0, 4096);
+    /// assert_eq!(section.length_symbol(), "_FLASH_length");
+    /// ```
+    pub fn length_symbol(&self) -> String {
+        format!("_{}_length", self.name)
+    }
+
+    /// Creates the line for the linker script with the start of the symbol.
+    ///
+    /// ```
+    /// # use ld_memory::MemorySection;
+    /// let section = MemorySection::new("FLASH", 0, 4096);
+    /// assert_eq!(section.ldmemory_start_symbol(), "_FLASH_start = 0x0;");
+    /// ```
+    pub fn ldmemory_start_symbol(&self) -> String {
+        format!("{} = {:#X};", self.start_symbol(), self.origin)
+    }
+
+    /// Creates the line for the linker script with the length of the symbol.
+    ///
+    /// ```
+    /// # use ld_memory::MemorySection;
+    /// let section = MemorySection::new("FLASH", 0, 4096);
+    /// assert_eq!(section.ldmemory_length_symbol(), "_FLASH_length = 0x1000;");
+    /// ```
+    pub fn ldmemory_length_symbol(&self) -> String {
+        format!("{} = {:#X};", self.length_symbol(), self.length)
     }
 }
 
