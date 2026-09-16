@@ -60,6 +60,11 @@ impl Memory {
         std::fs::write(path, self.to_ldmemory())
     }
 
+    /// Get a reference to this object's `Sections`.
+    pub fn sections(&self) -> &Vec<MemorySection> {
+        &self.sections
+    }
+
     #[cfg(feature = "build-rs")]
     pub fn to_cargo_outdir(&self, filename: &str) -> std::io::Result<()> {
         use std::path::PathBuf;
@@ -316,6 +321,31 @@ impl MemorySection {
     /// ```
     pub fn ldmemory_length_symbol(&self) -> String {
         format!("{} = {:#X};", self.length_symbol(), self.length)
+    }
+
+    /// Get this section's name.
+    pub fn get_name(&self) -> &String {
+        &self.name
+    }
+
+    /// Get this section's `length`.
+    pub fn get_length(&self) -> u64 {
+        self.length
+    }
+
+    /// Get this section's `origin`.
+    pub fn get_origin(&self) -> u64 {
+        self.origin
+    }
+
+    /// Get this section's attributes.
+    pub fn get_attrs(&self) -> Option<&String> {
+        self.attrs.as_ref()
+    }
+
+    /// Get this section's pagesize.
+    pub fn get_pagesize(&self) -> u64 {
+        self.pagesize
     }
 }
 
