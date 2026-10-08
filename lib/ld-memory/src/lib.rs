@@ -16,6 +16,12 @@ pub struct Memory {
     sections: Vec<MemorySection>,
 }
 
+#[derive(Debug)]
+pub enum Whence {
+    Beginning,
+    End,
+}
+
 impl Memory {
     pub fn new() -> Memory {
         Memory {
@@ -27,6 +33,103 @@ impl Memory {
         let mut sections = self.sections;
         sections.push(section);
         Memory { sections }
+    }
+
+    /// Splits a memory section by carving out a region from its beginning or end.
+    ///
+    /// The carved-out region becomes a new section named `new_section_name`,
+    /// while the remaining region retains the original section's name.
+    ///
+    /// Both sections inherit the original section's attributes and page size.
+    /// The sections are kept in address order, and all other sections remain
+    /// unchanged.
+    ///
+    /// # Arguments
+    ///
+    /// * `section_name` - Name of the section to split.
+    /// * `new_section_name` - Name assigned to the carved-out region.
+    /// * `len` - Size of the region to carve out, in bytes.
+    /// * `whence` - Whether to carve from the beginning or end of the section.
+    ///
+    /// # Returns
+    ///
+    /// Returns the modified [`Memory`] containing both sections.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// * The section cannot be found.
+    /// * `len` is zero or greater than or equal to the section's length.
+    /// * `len` cannot be represented as a `u64`.
+    ///
+    /// # Notes
+    ///
+    /// The split does not need to be page-aligned. Both resulting sections
+    /// retain the original `pagesize`, even if their origins or lengths
+    /// are not multiples of it.
+    ///
+    /// # Example
+    ///
+    /// Given a section `RAM` starting at `0x1000` with length `0x2000`,
+    /// carving out `0x400` bytes produces:
+    ///
+    /// * `Whence::Beginning`: `NEW` at `0x1000` (length `0x400`),
+    ///   followed by `RAM` at `0x1400` (length `0x1C00`).
+    /// * `Whence::End`: `RAM` at `0x1000` (length `0x1C00`),
+    ///   followed by `NEW` at `0x2C00` (length `0x400`).
+    pub fn split_section(
+        mut self,
+        section_name: &str,
+        new_section_name: &str,
+        len: u64,
+        whence: Whence,
+    ) -> Result<Memory, String> {
+        let index = self
+            .sections
+            .iter()
+            .position(|s| s.name == section_name)
+            .ok_or_else(|| format!("Section '{section_name}' not found"))?;
+
+        let section = &self.sections[index];
+
+        if len == 0 || len >= section.length {
+            return Err("Split length must be between 1 and section length - 1".into());
+        }
+
+        let mut original = MemorySection {
+            name: section.name.clone(),
+            attrs: section.attrs.clone(),
+            origin: section.origin,
+            length: section.length,
+            pagesize: section.pagesize,
+        };
+
+        let mut carved = MemorySection {
+            name: new_section_name.to_string(),
+            attrs: section.attrs.clone(),
+            origin: section.origin,
+            length: len,
+            pagesize: section.pagesize,
+        };
+
+        let replacements = match whence {
+            Whence::Beginning => {
+                original.origin += len;
+                original.length -= len;
+
+                [carved, original]
+            }
+            Whence::End => {
+                carved.origin += original.length - len;
+                original.length -= len;
+
+                [original, carved]
+            }
+        };
+
+        self.sections.splice(index..=index, replacements);
+
+        Ok(self)
     }
 
     pub fn to_ldmemory(&self) -> String {
@@ -455,7 +558,7 @@ pub mod parse {
 
 #[cfg(test)]
 mod tests {
-    use super::{Memory, MemorySection};
+    use super::{Memory, MemorySection, Whence};
     #[test]
     fn basic_memory() {
         let memory = Memory::new();
@@ -508,5 +611,139 @@ mod tests {
                 "}\n"
             )
         );
+    }
+
+    fn test_memory() -> Memory {
+        Memory {
+            sections: vec![
+                MemorySection {
+                    name: "ROM".into(),
+                    attrs: Some("rx".into()),
+                    origin: 0x0000,
+                    length: 0x1000,
+                    pagesize: 0x1000,
+                },
+                MemorySection {
+                    name: "RAM".into(),
+                    attrs: Some("rw".into()),
+                    origin: 0x1000,
+                    length: 0x2000,
+                    pagesize: 0x1000,
+                },
+                MemorySection {
+                    name: "IO".into(),
+                    attrs: None,
+                    origin: 0x3000,
+                    length: 0x1000,
+                    pagesize: 0x1000,
+                },
+            ],
+        }
+    }
+
+    #[test]
+    fn split_from_beginning() {
+        let memory = test_memory()
+            .split_section("RAM", "STACK", 0x400, Whence::Beginning)
+            .unwrap();
+
+        assert_eq!(memory.sections.len(), 4);
+
+        let carved = &memory.sections[1];
+        assert_eq!(carved.name, "STACK");
+        assert_eq!(carved.origin, 0x1000);
+        assert_eq!(carved.length, 0x400);
+        assert_eq!(carved.attrs.as_deref(), Some("rw"));
+        assert_eq!(carved.pagesize, 0x1000);
+
+        let remaining = &memory.sections[2];
+        assert_eq!(remaining.name, "RAM");
+        assert_eq!(remaining.origin, 0x1400);
+        assert_eq!(remaining.length, 0x1C00);
+    }
+
+    #[test]
+    fn split_from_end() {
+        let memory = test_memory()
+            .split_section("RAM", "STACK", 0x400, Whence::End)
+            .unwrap();
+
+        assert_eq!(memory.sections.len(), 4);
+
+        let remaining = &memory.sections[1];
+        assert_eq!(remaining.name, "RAM");
+        assert_eq!(remaining.origin, 0x1000);
+        assert_eq!(remaining.length, 0x1C00);
+
+        let carved = &memory.sections[2];
+        assert_eq!(carved.name, "STACK");
+        assert_eq!(carved.origin, 0x2C00);
+        assert_eq!(carved.length, 0x400);
+        assert_eq!(carved.attrs.as_deref(), Some("rw"));
+        assert_eq!(carved.pagesize, 0x1000);
+    }
+
+    #[test]
+    fn split_non_page_aligned() {
+        let memory = test_memory()
+            .split_section("RAM", "SMALL", 123, Whence::Beginning)
+            .unwrap();
+
+        let carved = &memory.sections[1];
+        let remaining = &memory.sections[2];
+
+        assert_eq!(carved.length, 123);
+        assert_eq!(remaining.origin, 0x1000 + 123);
+        assert_eq!(remaining.length, 0x2000 - 123);
+
+        // The two sections still cover exactly the original range.
+        assert_eq!(carved.origin, 0x1000);
+        assert_eq!(carved.origin + carved.length, remaining.origin);
+        assert_eq!(remaining.origin + remaining.length, 0x3000);
+    }
+
+    #[test]
+    fn split_zero_length_fails() {
+        let result = test_memory().split_section("RAM", "EMPTY", 0, Whence::Beginning);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn split_entire_section_fails() {
+        let result = test_memory().split_section("RAM", "ALL", 0x2000, Whence::End);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn split_too_large_fails() {
+        let result = test_memory().split_section("RAM", "TOO_BIG", 0x3000, Whence::Beginning);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn split_unknown_section_fails() {
+        let result = test_memory().split_section("UNKNOWN", "NEW", 0x100, Whence::Beginning);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn split_preserves_other_sections() {
+        let memory = test_memory()
+            .split_section("RAM", "STACK", 0x400, Whence::End)
+            .unwrap();
+
+        let names: Vec<&str> = memory.sections.iter().map(|s| s.name.as_str()).collect();
+
+        assert_eq!(names, ["ROM", "RAM", "STACK", "IO"]);
+
+        assert_eq!(memory.sections[0].origin, 0x0000);
+        assert_eq!(memory.sections[0].length, 0x1000);
+
+        assert_eq!(memory.sections[3].origin, 0x3000);
+        assert_eq!(memory.sections[3].length, 0x1000);
     }
 }
